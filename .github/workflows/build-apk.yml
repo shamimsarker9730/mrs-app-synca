@@ -31,17 +31,42 @@ jobs:
         mv -f AndroidManifest.xml app/src/main/ 2>/dev/null || true
         mv -f activity_main.xml app/src/main/res/layout/ 2>/dev/null || true
 
-        # 3. Setup app build.gradle from the uploaded build (1).gradle
+        # 3. Setup app build.gradle
         if [ -f "build (1).gradle" ]; then
           mv -f "build (1).gradle" app/build.gradle
         fi
 
-        # 4. Ensure settings.gradle and gradle.properties are clean
-        printf "rootProject.name = 'MRSPaySync'\ninclude ':app'\n" > settings.gradle
-        printf "plugins {\n    id 'com.android.application' version '8.2.2' apply false\n}\n" > build.gradle
+        # 4. Clean settings.gradle with google plugin repositories
+        cat << 'EOF' > settings.gradle
+        pluginManagement {
+            repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+            }
+        }
+        dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
+        rootProject.name = "MRSPaySync"
+        include ':app'
+        EOF
+
+        # 5. Root build.gradle
+        cat << 'EOF' > build.gradle
+        plugins {
+            id 'com.android.application' version '8.2.2' apply false
+        }
+        EOF
+
+        # 6. gradle.properties
         printf "android.useAndroidX=true\nandroid.enableJetifier=true\norg.gradle.jvmargs=-Xmx2048m\n" > gradle.properties
 
-        # 5. Generate wrapper 8.2 and build APK cleanly
+        # 7. Generate Gradle Wrapper 8.2 and build
         gradle wrapper --gradle-version 8.2
         ./gradlew assembleDebug --no-daemon
 
