@@ -19,22 +19,34 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Build Debug APK
+    - name: Assemble Android Folder Structure and Build APK
       run: |
-        # Find where settings.gradle or build.gradle exists
-        TARGET_DIR=$(find . -name "settings.gradle" -exec dirname {} \; | head -n 1)
-        if [ -z "$TARGET_DIR" ]; then
-          TARGET_DIR="."
-        fi
-        echo "Found project at: $TARGET_DIR"
-        cd "$TARGET_DIR"
+        # 1. Create proper android directories
+        mkdir -p app/src/main/java/com/mrstopup/smsforwarder
+        mkdir -p app/src/main/res/layout
 
-        # If app directory is missing, make sure Gradle knows the structure
-        ls -la
-        gradle assembleDebug --no-daemon
+        # 2. Move source code and resources into standard paths
+        mv -f MainActivity.java app/src/main/java/com/mrstopup/smsforwarder/ 2>/dev/null || true
+        mv -f SmsReceiver.java app/src/main/java/com/mrstopup/smsforwarder/ 2>/dev/null || true
+        mv -f AndroidManifest.xml app/src/main/ 2>/dev/null || true
+        mv -f activity_main.xml app/src/main/res/layout/ 2>/dev/null || true
+
+        # 3. Setup app build.gradle from the uploaded build (1).gradle
+        if [ -f "build (1).gradle" ]; then
+          mv -f "build (1).gradle" app/build.gradle
+        fi
+
+        # 4. Ensure settings.gradle and gradle.properties are clean
+        printf "rootProject.name = 'MRSPaySync'\ninclude ':app'\n" > settings.gradle
+        printf "plugins {\n    id 'com.android.application' version '8.2.2' apply false\n}\n" > build.gradle
+        printf "android.useAndroidX=true\nandroid.enableJetifier=true\norg.gradle.jvmargs=-Xmx2048m\n" > gradle.properties
+
+        # 5. Generate wrapper 8.2 and build APK cleanly
+        gradle wrapper --gradle-version 8.2
+        ./gradlew assembleDebug --no-daemon
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: MRSPaySync-v1.0
-        path: "**/build/outputs/apk/debug/*.apk"
+        path: app/build/outputs/apk/debug/*.apk
