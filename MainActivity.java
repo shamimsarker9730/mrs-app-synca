@@ -3,15 +3,21 @@ package com.mrstopup.smsforwarder;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -19,13 +25,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
-import org.json.JSONObject;
-
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends AppCompatActivity {
     private static final int SMS_PERMISSION_CODE = 101;
@@ -35,6 +34,8 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private ProgressBar progressBar;
+    private LinearLayout layoutOffline;
+    private Button btnRetry;
     private SharedPreferences prefs;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -53,12 +54,31 @@ public class MainActivity extends AppCompatActivity {
 
         webView = findViewById(R.id.webView);
         progressBar = findViewById(R.id.progressBar);
+        layoutOffline = findViewById(R.id.layoutOffline);
+        btnRetry = findViewById(R.id.btnRetry);
 
         setupWebView();
         requestSmsPermissions();
-        sendHeartbeatPing();
+        startBackgroundService();
+
+        btnRetry.setOnClickListener(v -> {
+            layoutOffline.setVisibility(View.GONE);
+            webView.setVisibility(View.VISIBLE);
+            webView.reload();
+        });
 
         webView.loadUrl(DEFAULT_ADMIN_URL);
+    }
+
+    private void startBackgroundService() {
+        try {
+            Intent serviceIntent = new Intent(this, HeartbeatService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+        } catch (Exception ignored) {}
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -83,6 +103,25 @@ public class MainActivity extends AppCompatActivity {
                 super.onPageFinished(view, url);
                 if (progressBar != null) progressBar.setVisibility(View.GONE);
             }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                if (request.isForMainFrame()) {
+                    webView.setVisibility(View.GONE);
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    layoutOffline.setVisibility(View.VISIBLE);
+                }
+            }
+
+            @SuppressWarnings("deprecation")
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                super.onReceivedError(view, errorCode, description, failingUrl);
+                webView.setVisibility(View.GONE);
+                if (progressBar != null) progressBar.setVisibility(View.GONE);
+                layoutOffline.setVisibility(View.VISIBLE);
+            }
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
@@ -105,31 +144,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void sendHeartbeatPing() {
-        new Thread(() -> {
-            try {
-                URL url = new URL(PING_URL);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json; utf-8");
-                conn.setRequestProperty("X-Gateway-Secret", SECRET_KEY);
-                conn.setConnectTimeout(6000);
-                conn.setDoOutput(true);
-
-                JSONObject json = new JSONObject();
-                json.put("ping", true);
-                json.put("secret", SECRET_KEY);
-
-                byte[] postData = json.toString().getBytes(StandardCharsets.UTF_8);
-                try (OutputStream os = conn.getOutputStream()) {
-                    os.write(postData, 0, postData.length);
-                }
-                conn.getResponseCode();
-                conn.disconnect();
-            } catch (Exception ignored) {}
-        }).start();
-    }
-
     @Override
     public void onBackPressed() {
         if (webView.canGoBack()) {
@@ -144,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == SMS_PERMISSION_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "✓ SMS সিঙ্ক ও রিডার চালু হয়েছে!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "✓ SMS সিঙ্ক ও রিডার সক্রিয়!", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(this, "⚠️ SMS পারমিশন ছাড়া স্বয়ংক্রিয় সিঙ্ক কাজ করবে না!", Toast.LENGTH_LONG).show();
             }
