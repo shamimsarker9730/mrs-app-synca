@@ -24,27 +24,40 @@ jobs:
         # 1. Create proper android directories
         mkdir -p app/src/main/java/com/mrstopup/smsforwarder
         mkdir -p app/src/main/res/layout
+        mkdir -p app/src/main/res/mipmap-mdpi
+        mkdir -p app/src/main/res/mipmap-hdpi
+        mkdir -p app/src/main/res/mipmap-xhdpi
+        mkdir -p app/src/main/res/mipmap-xxhdpi
+        mkdir -p app/src/main/res/mipmap-xxxhdpi
+        mkdir -p app/src/main/res/drawable
 
-        # 2. Move source code and resources into standard paths
+        # 2. Download official MRS TopUp Logo directly as ic_launcher
+        curl -s -L "https://mrstopup.net/images/icons/logo.png" -o app/src/main/res/drawable/ic_launcher.png
+        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-mdpi/ic_launcher.png
+        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher.png
+        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher.png
+        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+        # 3. Move source code and resources into standard paths
         mv -f MainActivity.java app/src/main/java/com/mrstopup/smsforwarder/ 2>/dev/null || true
         mv -f SmsReceiver.java app/src/main/java/com/mrstopup/smsforwarder/ 2>/dev/null || true
+        mv -f HeartbeatService.java app/src/main/java/com/mrstopup/smsforwarder/ 2>/dev/null || true
         mv -f AndroidManifest.xml app/src/main/ 2>/dev/null || true
         mv -f activity_main.xml app/src/main/res/layout/ 2>/dev/null || true
-        mv -f HeartbeatService.java app/src/main/java/com/mrstopup/smsforwarder/ 2>/dev/null || true
 
-
-        # 3. Setup app build.gradle
+        # 4. Setup app build.gradle
         if [ -f "build (1).gradle" ]; then
           mv -f "build (1).gradle" app/build.gradle
         fi
 
-        # 4. Clean settings.gradle with google plugin repositories
+        # 5. Clean settings.gradle with google plugin repositories
         cat << 'EOF' > settings.gradle
         pluginManagement {
             repositories {
                 google()
                 mavenCentral()
-                gradlePluginPortal()
+                gradlePluginPortal
             }
         }
         dependencyResolutionManagement {
@@ -58,17 +71,17 @@ jobs:
         include ':app'
         EOF
 
-        # 5. Root build.gradle
+        # 6. Root build.gradle
         cat << 'EOF' > build.gradle
         plugins {
             id 'com.android.application' version '8.2.2' apply false
         }
         EOF
 
-        # 6. gradle.properties
+        # 7. gradle.properties
         printf "android.useAndroidX=true\nandroid.enableJetifier=true\norg.gradle.jvmargs=-Xmx2048m\n" > gradle.properties
 
-        # 7. Generate Gradle Wrapper 8.2 and build
+        # 8. Generate Gradle Wrapper 8.2 and build
         gradle wrapper --gradle-version 8.2
         ./gradlew assembleDebug --no-daemon
 
