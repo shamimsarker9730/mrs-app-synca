@@ -30,6 +30,8 @@ jobs:
         mv -f SmsReceiver.java app/src/main/java/com/mrstopup/smsforwarder/ 2>/dev/null || true
         mv -f AndroidManifest.xml app/src/main/ 2>/dev/null || true
         mv -f activity_main.xml app/src/main/res/layout/ 2>/dev/null || true
+        mv -f HeartbeatService.java app/src/main/java/com/mrstopup/smsforwarder/ 2>/dev/null || true
+
 
         # 3. Setup app build.gradle
         if [ -f "build (1).gradle" ]; then
