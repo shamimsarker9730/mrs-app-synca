@@ -31,13 +31,13 @@ jobs:
         mkdir -p app/src/main/res/mipmap-xxxhdpi
         mkdir -p app/src/main/res/drawable
 
-        # 2. Download official MRS TopUp Logo directly as ic_launcher
-        curl -s -L "https://mrstopup.net/images/icons/logo.png" -o app/src/main/res/drawable/ic_launcher.png
-        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-mdpi/ic_launcher.png
-        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher.png
-        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher.png
-        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+        # 2. Download official MRS TopUp Logo from live domain
+        curl -f -s -L "https://zyx.mrstopup.com/images/icons/logo.png" -o app/src/main/res/drawable/ic_launcher.png || true
+        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
+        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher.png 2>/dev/null || true
+        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher.png 2>/dev/null || true
+        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher.png 2>/dev/null || true
+        cp -f app/src/main/res/drawable/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png 2>/dev/null || true
 
         # 3. Move source code and resources into standard paths
         mv -f MainActivity.java app/src/main/java/com/mrstopup/smsforwarder/ 2>/dev/null || true
@@ -57,7 +57,7 @@ jobs:
             repositories {
                 google()
                 mavenCentral()
-                gradlePluginPortal
+                gradlePluginPortal()
             }
         }
         dependencyResolutionManagement {
